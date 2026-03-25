@@ -1,0 +1,583 @@
+================================================================
+  CineSpark — Project Documentation
+  A Web-Based Movie Ticket Booking System
+  Author : Emil Abraham
+  Stack  : React.js + Node.js + Express + MySQL (XAMPP)
+================================================================
+
+
+================================================================
+TABLE OF CONTENTS
+================================================================
+
+  1.  Project Overview
+  2.  Technology Stack
+  3.  Project Structure
+  4.  Database Schema
+  5.  Backend API Reference
+  6.  Frontend Pages & Routes
+  7.  Authentication & Security
+  8.  Admin Panel
+  9.  Booking Flow (User Journey)
+  10. Admin Credentials
+  11. Environment Variables
+  12. How to Run (Quick Start)
+  13. Known Behaviours & Notes
+
+
+================================================================
+1. PROJECT OVERVIEW
+================================================================
+
+CineSpark is a full-stack web-based movie ticket booking platform.
+Users can browse movies, view showtimes, select seats, and confirm
+bookings through a simulated payment system.
+
+An admin panel allows full management of movies, showtimes,
+screens, and bookings.
+
+Key Features:
+  - Movie browsing with posters, ratings, genre, and description
+  - Showtime selection grouped by date
+  - Interactive seat map with real-time availability
+  - Simulated card payment with validation
+  - Booking confirmation with unique reference number
+  - User booking history with cancel option
+  - Full admin dashboard (stats, revenue, user management)
+  - JWT-based authentication for users and admins
+  - Responsive design (mobile + desktop)
+
+
+================================================================
+2. TECHNOLOGY STACK
+================================================================
+
+Frontend
+--------
+  Framework   : React.js (Vite)
+  Styling     : Tailwind CSS
+  Routing     : React Router DOM
+  HTTP Client : Axios
+  Language    : JavaScript (JSX)
+  Port        : http://localhost:5173
+
+Backend
+-------
+  Runtime     : Node.js
+  Framework   : Express.js v5
+  Auth        : JSON Web Tokens (JWT) + bcryptjs
+  Database    : MySQL via mysql2 (XAMPP)
+  Language    : JavaScript (CommonJS)
+  Port        : http://localhost:5000
+
+Database
+--------
+  Engine      : MySQL (provided by XAMPP)
+  DB Name     : cinespark
+  Tables      : 7 (users, movies, screens, seats,
+                    showtimes, bookings, booking_seats)
+
+
+================================================================
+3. PROJECT STRUCTURE
+================================================================
+
+D:/Cine-Spark/
+├── Cine_spark_Backend/
+│   ├── server.js                  Entry point
+│   ├── seed.js                    Seeds admin user
+│   ├── seed-movies.js             Seeds movies, screens, seats, showtimes
+│   ├── update-admin.js            Updates admin credentials
+│   ├── .env                       Environment config
+│   ├── package.json
+│   └── src/
+│       ├── app.js                 Express app setup + routes
+│       ├── config/
+│       │   ├── db.js              MySQL connection pool
+│       │   └── initDb.js          Auto-creates tables on startup
+│       ├── middleware/
+│       │   └── auth.js            JWT protect + adminOnly middleware
+│       ├── controllers/
+│       │   ├── authController.js
+│       │   ├── movieController.js
+│       │   ├── showtimeController.js
+│       │   ├── seatController.js
+│       │   ├── bookingController.js
+│       │   └── adminController.js
+│       └── routes/
+│           ├── auth.js
+│           ├── movies.js
+│           ├── showtimes.js
+│           ├── seats.js
+│           ├── bookings.js
+│           └── admin.js
+│
+└── cinespark_frontend_react_js/
+    └── CineSpark_Frontend_React_js/
+        └── CineSpark_Frontend_React_js/
+            ├── index.html
+            ├── vite.config.js
+            ├── tailwind.config.js
+            ├── package.json
+            └── src/
+                ├── main.jsx
+                ├── App.jsx                Routes + AdminRoute guard
+                ├── contexts/
+                │   └── AuthContext.jsx    Global auth state
+                ├── services/
+                │   └── api.js             Axios instance + all API calls
+                ├── components/
+                │   ├── layout/
+                │   │   ├── Header.jsx
+                │   │   └── Footer.jsx
+                │   └── ui/
+                │       ├── LoginModal.jsx
+                │       ├── AdminLoginModal.jsx
+                │       └── SkeletonCard.jsx
+                └── pages/
+                    ├── index.jsx              Home (movie listing)
+                    ├── coming-soon.jsx
+                    ├── 404.jsx
+                    ├── auth/
+                    │   ├── login.jsx
+                    │   └── register.jsx
+                    ├── movies/
+                    │   └── MoviePage.jsx      Movie detail + showtime select
+                    ├── booking/
+                    │   ├── seat-selection.jsx
+                    │   ├── payment.jsx
+                    │   └── confirmation.jsx
+                    ├── user/
+                    │   └── my-bookings.jsx
+                    └── admin/
+                        ├── index.jsx          Dashboard
+                        ├── movies.jsx
+                        ├── showtimes.jsx
+                        ├── screens.jsx
+                        ├── bookings.jsx
+                        └── settings.jsx
+
+
+================================================================
+4. DATABASE SCHEMA
+================================================================
+
+Table: users
+  id          INT, AUTO_INCREMENT, PRIMARY KEY
+  name        VARCHAR(100), NOT NULL
+  email       VARCHAR(100), NOT NULL, UNIQUE
+  password    VARCHAR(255), NOT NULL  (bcrypt hashed)
+  role        ENUM('user', 'admin'), DEFAULT 'user'
+  created_at  TIMESTAMP
+
+Table: movies
+  id            INT, AUTO_INCREMENT, PRIMARY KEY
+  title         VARCHAR(200), NOT NULL
+  description   TEXT
+  genre         VARCHAR(100)
+  duration      INT  (minutes)
+  language      VARCHAR(50)
+  release_date  DATE
+  poster_url    VARCHAR(500)
+  rating        DECIMAL(3,1), DEFAULT 0.0
+  is_active     BOOLEAN, DEFAULT TRUE
+  created_at    TIMESTAMP
+
+Table: screens
+  id           INT, AUTO_INCREMENT, PRIMARY KEY
+  name         VARCHAR(100), NOT NULL
+  total_seats  INT, NOT NULL
+  created_at   TIMESTAMP
+
+Table: seats
+  id           INT, AUTO_INCREMENT, PRIMARY KEY
+  screen_id    INT, FOREIGN KEY → screens(id)
+  row_label    VARCHAR(5)      e.g. 'A', 'B', 'C'
+  seat_number  INT             e.g. 1–10
+  seat_type    ENUM('standard', 'premium', 'vip')
+  UNIQUE       (screen_id, row_label, seat_number)
+
+Table: showtimes
+  id               INT, AUTO_INCREMENT, PRIMARY KEY
+  movie_id         INT, FOREIGN KEY → movies(id)
+  screen_id        INT, FOREIGN KEY → screens(id)
+  show_date        DATE
+  show_time        TIME
+  price            DECIMAL(8,2)
+  available_seats  INT
+  created_at       TIMESTAMP
+
+Table: bookings
+  id           INT, AUTO_INCREMENT, PRIMARY KEY
+  user_id      INT, FOREIGN KEY → users(id)
+  showtime_id  INT, FOREIGN KEY → showtimes(id)
+  total_price  DECIMAL(8,2)
+  status       ENUM('pending', 'confirmed', 'cancelled'), DEFAULT 'confirmed'
+  booking_ref  VARCHAR(20), UNIQUE   e.g. CS3F2A1B
+  created_at   TIMESTAMP
+
+Table: booking_seats
+  id          INT, AUTO_INCREMENT, PRIMARY KEY
+  booking_id  INT, FOREIGN KEY → bookings(id)
+  seat_id     INT, FOREIGN KEY → seats(id)
+  showtime_id INT, FOREIGN KEY → showtimes(id)
+  UNIQUE      (seat_id, showtime_id)  ← prevents double booking
+
+
+================================================================
+5. BACKEND API REFERENCE
+================================================================
+
+Base URL: http://localhost:5000/api
+
+── Health Check ──────────────────────────────────────────────
+GET    /api/health
+  Response: { status: 'ok', project: 'CineSpark API' }
+
+── Auth ──────────────────────────────────────────────────────
+POST   /api/auth/register
+  Body:     { name, email, password }
+  Response: { token, user: { id, name, email, role } }
+
+POST   /api/auth/login
+  Body:     { email, password }
+  Response: { token, user: { id, name, email, role } }
+
+GET    /api/auth/me                  [requires token]
+  Response: { id, name, email, role, created_at }
+
+── Movies ────────────────────────────────────────────────────
+GET    /api/movies
+  Returns all active movies ordered by release date DESC
+
+GET    /api/movies/:id
+  Returns single movie or 404
+
+GET    /api/movies/:id/showtimes
+  Returns upcoming showtimes for a movie (today onwards)
+
+POST   /api/movies                   [admin only]
+  Body: { title, description, genre, duration, language,
+          release_date, poster_url, rating }
+
+PUT    /api/movies/:id               [admin only]
+  Body: same as POST + is_active
+
+DELETE /api/movies/:id               [admin only]
+
+── Showtimes ─────────────────────────────────────────────────
+GET    /api/showtimes
+  Returns all upcoming showtimes with movie + screen info
+
+GET    /api/showtimes/:id
+  Returns single showtime with movie + screen info
+
+POST   /api/showtimes                [admin only]
+  Body: { movie_id, screen_id, show_date, show_time,
+          price, available_seats }
+
+PUT    /api/showtimes/:id            [admin only]
+DELETE /api/showtimes/:id            [admin only]
+
+── Seats ─────────────────────────────────────────────────────
+GET    /api/seats/showtime/:showtimeId
+  Returns all seats for a showtime with status
+  (available / booked)
+
+── Bookings ──────────────────────────────────────────────────
+POST   /api/bookings                 [requires login]
+  Body:     { showtime_id, seat_ids: [1, 2, 3] }
+  Response: { booking_ref, booking_id, total_price }
+  Note: Uses DB transaction — prevents double booking
+
+GET    /api/bookings/my              [requires login]
+  Returns current user's full booking history
+
+GET    /api/bookings/:id             [requires login]
+  Returns single booking (must belong to user)
+
+PATCH  /api/bookings/:id/cancel      [requires login]
+  Cancels booking + restores available_seats count
+
+── Admin ─────────────────────────────────────────────────────
+All admin routes require a valid admin JWT token.
+
+GET    /api/admin/dashboard
+  Returns: totalUsers, totalMovies, totalBookings,
+           totalRevenue, recentBookings, revenueByMovie
+
+GET    /api/admin/users
+PATCH  /api/admin/users/:id/role     Body: { role: 'user'|'admin' }
+
+GET    /api/admin/bookings
+PATCH  /api/admin/bookings/:id/status  Body: { status: 'confirmed'|'cancelled' }
+
+GET    /api/admin/screens
+POST   /api/admin/screens            Body: { name, total_seats }
+PUT    /api/admin/screens/:id        Body: { name, total_seats }
+DELETE /api/admin/screens/:id
+
+POST   /api/admin/screens/:id/generate-seats
+  Body: { rows: ['A','B','C'], seats_per_row: 10, seat_type: 'standard' }
+  Generates full seat layout for a screen (safe to re-run)
+
+PUT    /api/admin/profile            Body: { name, email }
+PUT    /api/admin/password           Body: { currentPassword, newPassword }
+
+
+================================================================
+6. FRONTEND PAGES & ROUTES
+================================================================
+
+Route                     Page / Component
+---------                 ----------------
+/                         Home — movie grid with search/filter
+/movies/:id               Movie detail + showtime selection
+/booking/seat-selection   Interactive seat map
+/booking/payment          Simulated card payment form
+/booking/confirmation     Booking success + reference number
+/auth/login               Login page
+/auth/register            Register page
+/user/my-bookings         User's booking history + cancel
+/coming-soon              Coming Soon placeholder page
+/admin                    Admin dashboard (protected)
+/admin/movies             Manage movies (protected)
+/admin/showtimes          Manage showtimes (protected)
+/admin/screens            Manage screens + seats (protected)
+/admin/bookings           View/manage all bookings (protected)
+/admin/settings           Admin profile + password (protected)
+*                         404 Not Found page
+
+All /admin/* routes redirect to / if user is not an admin.
+
+
+================================================================
+7. AUTHENTICATION & SECURITY
+================================================================
+
+User Auth
+---------
+- Register / Login via email + password
+- Password hashed with bcryptjs (10 salt rounds)
+- On login, server returns a JWT token (expires in 7 days)
+- Token stored in localStorage under key: cs_token
+- User info stored in localStorage under key: cs_user
+- Token automatically attached to all API requests via
+  Axios request interceptor
+
+Admin Auth
+----------
+- Admin logs in via the same /api/auth/login endpoint
+- Server checks role === 'admin' before granting admin access
+- Frontend AdminRoute component blocks non-admin users
+- Admin login accessible via the "Admin" button in the header
+
+JWT Secret
+----------
+- Configured in .env as JWT_SECRET
+- Default: cinespark_super_secret_key_change_in_production
+- Change this before any public deployment
+
+Double Booking Prevention
+-------------------------
+- Booking creation uses a MySQL transaction with FOR UPDATE lock
+- booking_seats table has a UNIQUE constraint on (seat_id, showtime_id)
+- If two users try to book the same seat simultaneously,
+  one will receive a 409 "already booked" error
+
+
+================================================================
+8. ADMIN PANEL
+================================================================
+
+Dashboard
+  - Total users, movies, confirmed bookings, revenue
+  - Recent 10 bookings table
+  - Revenue breakdown per movie
+
+Movies
+  - View, add, edit, delete movies
+  - Toggle movie active/inactive status
+
+Showtimes
+  - View, add, edit, delete showtimes
+  - Assign movie + screen + date/time + price
+
+Screens
+  - View, add, edit, delete screens
+  - Generate seat layout for a screen (rows + seats per row)
+
+Bookings
+  - View all bookings across all users
+  - Manually confirm or cancel any booking
+
+Settings
+  - Update admin name and email
+  - Change admin password (requires current password)
+
+
+================================================================
+9. BOOKING FLOW (USER JOURNEY)
+================================================================
+
+Step 1 — Browse Movies
+  Home page loads all active movies from /api/movies
+
+Step 2 — Select Showtime
+  Click a movie → MoviePage loads showtimes grouped by date
+  User clicks a time slot to select it
+
+Step 3 — Select Seats
+  Click "Select Seats" → seat-selection page loads
+  Calls /api/seats/showtime/:id to get all seats + availability
+  Green = available, Red = booked, Gold = selected by user
+  User clicks to select/deselect seats
+
+Step 4 — Payment
+  User fills card name, number (16 digits), expiry, CVV
+  All fields validated before submission
+  On submit → calls POST /api/bookings with showtime_id + seat_ids
+  Card details are NOT sent to the server (simulation only)
+
+Step 5 — Confirmation
+  If booking succeeds, navigates to confirmation page
+  Displays: booking reference, movie, seats, total paid
+
+Step 6 — My Bookings
+  User can view all past/current bookings at /user/my-bookings
+  Can cancel confirmed bookings (seats freed back immediately)
+
+
+================================================================
+10. ADMIN CREDENTIALS
+================================================================
+
+  Email    : admin@gmail.com
+  Password : admin@123
+
+  Login URL: http://localhost:5173
+             Click "Admin" in the top-right of the header
+
+  Note: To reset admin credentials at any time, run:
+        npm run update:admin
+
+
+================================================================
+11. ENVIRONMENT VARIABLES (.env)
+================================================================
+
+File location: Cine_spark_Backend/.env
+
+  PORT=5000
+    The port the backend server runs on.
+
+  DB_HOST=localhost
+    MySQL host (localhost for XAMPP).
+
+  DB_PORT=3306
+    MySQL port (3306 is default).
+
+  DB_USER=root
+    MySQL username (XAMPP default is root).
+
+  DB_PASSWORD=
+    MySQL password (XAMPP default is empty — leave blank).
+
+  DB_NAME=cinespark
+    The database name. Created automatically on first run.
+
+  JWT_SECRET=cinespark_super_secret_key_change_in_production
+    Secret key used to sign/verify JWT tokens.
+    Change this to a long random string for any deployment.
+
+  CLIENT_URL=http://localhost:5173
+    The frontend URL. Used by the backend CORS configuration.
+    Must match the port Vite is running on.
+
+
+================================================================
+12. HOW TO RUN (QUICK START)
+================================================================
+
+Prerequisites
+  - Node.js (v18+)   → https://nodejs.org
+  - XAMPP            → https://www.apachefriends.org
+
+Step 1 — Start XAMPP MySQL
+  Open XAMPP Control Panel → Start MySQL
+
+Step 2 — Start Backend
+  cd Cine_spark_Backend
+  npm install           (first time only)
+  npm run seed          (first time only — creates admin)
+  npm run seed:movies   (first time only — adds movies + seats)
+  npm run dev
+
+  Expected output:
+    MySQL connected via XAMPP
+    All tables created/verified successfully
+    CineSpark API running on http://localhost:5000
+
+Step 3 — Start Frontend
+  cd cinespark_frontend_react_js/CineSpark_Frontend_React_js/CineSpark_Frontend_React_js
+  npm install           (first time only)
+  npm run dev
+
+  Expected output:
+    VITE v6.x  ready in Xms
+    → Local: http://localhost:5173
+
+Step 4 — Open Browser
+  http://localhost:5173
+
+npm Scripts (Backend)
+  npm run dev           Start with nodemon (auto-reload)
+  npm run start         Start without auto-reload
+  npm run seed          Create admin user
+  npm run seed:movies   Add movies, screen, seats, showtimes
+  npm run update:admin  Update admin email/password
+
+npm Scripts (Frontend)
+  npm run dev           Start dev server
+  npm run build         Build for production
+  npm run preview       Preview production build
+
+
+================================================================
+13. KNOWN BEHAVIOURS & NOTES
+================================================================
+
+Simulated Payment
+  The payment page accepts any valid-format card details.
+  No real payment gateway is used. Card data is not sent
+  to the server. The booking is created in the database
+  immediately after form validation passes.
+
+Showtimes Expire Automatically
+  The seed generates showtimes for the next 7 days.
+  After 7 days, showtimes will no longer appear because
+  the backend filters show_date >= CURDATE().
+  Re-run npm run seed:movies to generate fresh showtimes.
+
+Seat Count
+  available_seats in the showtimes table is decremented
+  on booking and incremented on cancellation automatically.
+
+Booking Reference Format
+  References follow the format CS + 8 hex chars.
+  Example: CS3F2A1B4E
+
+Email Confirmation
+  The confirmation page notes that a real email would be
+  sent in a live version. No email is sent in this build
+  as it is a prototype.
+
+Admin vs User Login
+  Both use the same login endpoint. The frontend
+  checks role === 'admin' to grant admin panel access.
+  A regular user trying to access /admin is redirected
+  to the home page.
+
+================================================================
+  End of Documentation — CineSpark by Emil Abraham
+================================================================

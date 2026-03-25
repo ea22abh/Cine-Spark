@@ -1,0 +1,55 @@
+================================================================
+  CineSpark Backend — Setup Guide
+================================================================
+
+WHAT YOU NEED (install these first)
+-------------------------------------
+  1. Node.js  → https://nodejs.org  (download LTS version)
+  2. XAMPP    → https://www.apachefriends.org
+
+
+STEPS
+-------------------------------------
+
+1. START XAMPP
+   - Open XAMPP Control Panel
+   - Click "Start" next to MySQL
+
+2. INSTALL DEPENDENCIES
+   - Open a terminal inside this folder (Cine_spark_Backend)
+   - Run: npm install
+
+3. START THE SERVER
+   - Run: npm run dev
+   - You should see:
+       MySQL connected via XAMPP
+       CineSpark API running on http://localhost:5000
+
+4. SEED THE DATABASE (run these ONCE, first time only)
+   - Stop the server (Ctrl + C), then run:
+
+       npm run seed
+       npm run seed:movies
+
+   - This creates the admin user and adds movies to the database.
+   - Start the server again: npm run dev
+
+5. EVERY TIME AFTER THAT
+   - Start XAMPP MySQL
+   - Run: npm run dev
+
+
+ADMIN LOGIN
+-------------------------------------
+  Email   : admin@gmail.com
+  Password: admin@123
+
+
+COMMON PROBLEMS
+-------------------------------------
+  "Cannot connect to MySQL"  → XAMPP MySQL is not running. Start it.
+  "Movies not showing"       → Run the seed commands from Step 4.
+  "npm not found"            → Node.js is not installed. Install it.
+  "Port 5000 in use"         → Change PORT=5001 in the .env file.
+
+================================================================
